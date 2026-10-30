@@ -1,0 +1,1349 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>함수들의 좌표평면 대난투 (Function Battle Arena)</title>
+  <style>
+    :root {
+      --bg-main: #f1f5f9;
+      --panel-bg: #ffffff;
+      --panel-border: #cbd5e1;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --accent: #2563eb;
+      --font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      font-family: var(--font-family);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    header {
+      background: #ffffff;
+      border-bottom: 2px solid var(--panel-border);
+      padding: 8px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+      z-index: 10;
+    }
+
+    .logo-area {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-badge {
+      background: linear-gradient(135deg, #2563eb, #4f46e5);
+      color: #ffffff;
+      font-weight: 900;
+      font-size: 0.95rem;
+      padding: 4px 10px;
+      border-radius: 6px;
+    }
+
+    h1 {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: #1e293b;
+    }
+
+    .controls-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    button {
+      background: #f8fafc;
+      color: #1e293b;
+      border: 1px solid #cbd5e1;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s ease;
+    }
+
+    button:hover {
+      background: #e2e8f0;
+      border-color: #94a3b8;
+    }
+
+    button.primary {
+      background: #2563eb;
+      border-color: #1d4ed8;
+      color: #ffffff;
+    }
+
+    button.primary:hover {
+      background: #1d4ed8;
+    }
+
+    button.danger {
+      background: #fee2e2;
+      border-color: #fca5a5;
+      color: #b91c1c;
+    }
+
+    .speed-select {
+      background: #ffffff;
+      color: #1e293b;
+      border: 1px solid #cbd5e1;
+      padding: 5px 8px;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      font-weight: 600;
+    }
+
+    /* Compact Layout: reduced field, tight spacing */
+    .battle-layout {
+      display: grid;
+      grid-template-columns: 240px 1fr 320px;
+      gap: 10px;
+      padding: 10px;
+      flex: 1;
+      height: calc(100vh - 54px);
+    }
+
+    .roster-panel, .dashboard-panel {
+      background: var(--panel-bg);
+      border: 1.5px solid var(--panel-border);
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+
+    .panel-header {
+      padding: 8px 12px;
+      background: #f8fafc;
+      border-bottom: 1.5px solid var(--panel-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 800;
+      font-size: 0.85rem;
+      color: #1e293b;
+    }
+
+    .roster-list {
+      padding: 8px;
+      overflow-y: auto;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .roster-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 6px 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .roster-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .fn-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+
+    .fn-name {
+      font-size: 0.82rem;
+      font-weight: 800;
+    }
+
+    .fn-formula-sub {
+      font-size: 0.75rem;
+      color: #2563eb;
+      font-weight: 700;
+      font-family: monospace;
+    }
+
+    /* Switch */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 36px;
+      height: 20px;
+    }
+
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #cbd5e1; transition: .2s; border-radius: 20px;
+    }
+    .slider:before {
+      position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px;
+      background-color: white; transition: .2s; border-radius: 50%;
+    }
+    input:checked + .slider { background-color: #2563eb; }
+    input:checked + .slider:before { transform: translateX(16px); }
+
+    /* Center: Compact Canvas Arena (Bright Math Grid Paper) */
+    .canvas-container {
+      background: #ffffff;
+      border: 2px solid #94a3b8;
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    }
+
+    .canvas-topbar {
+      padding: 6px 12px;
+      background: #f8fafc;
+      border-bottom: 1.5px solid var(--panel-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #334155;
+    }
+
+    .canvas-topbar strong {
+      color: #2563eb;
+    }
+
+    #battleCanvas {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      background: #ffffff;
+      cursor: crosshair;
+    }
+
+    .canvas-overlay-banner {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(255, 255, 255, 0.96);
+      border: 3px solid #2563eb;
+      border-radius: 12px;
+      padding: 20px 30px;
+      text-align: center;
+      display: none;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      z-index: 20;
+    }
+
+    .canvas-overlay-banner h2 {
+      font-size: 1.5rem;
+      margin-bottom: 6px;
+      color: #2563eb;
+    }
+
+    /* Right: Dashboard with enhanced readability */
+    .dashboard-list {
+      padding: 8px;
+      overflow-y: auto;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .stat-card {
+      background: #ffffff;
+      border: 1.5px solid #cbd5e1;
+      border-left: 5px solid #2563eb;
+      border-radius: 6px;
+      padding: 7px 9px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+
+    .stat-card.eliminated {
+      opacity: 0.35;
+      filter: grayscale(1);
+      border-left-color: #94a3b8 !important;
+      background: #f1f5f9;
+    }
+
+    .stat-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .stat-fn-badge {
+      font-size: 0.8rem;
+      font-weight: 900;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .stat-formula {
+      font-family: monospace;
+      font-size: 0.84rem;
+      color: #1e293b;
+      font-weight: 800;
+    }
+
+    .item-counter-badge {
+      background: #fef08a;
+      border: 1px solid #facc15;
+      padding: 1px 6px;
+      border-radius: 10px;
+      font-size: 0.72rem;
+      font-weight: 900;
+      color: #854d0e;
+    }
+
+    .bar-group {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .bar-row {
+      display: flex;
+      align-items: center;
+      font-size: 0.74rem;
+      font-weight: 700;
+      gap: 6px;
+    }
+
+    .bar-label {
+      width: 40px;
+      color: #475569;
+    }
+
+    .bar-track {
+      flex: 1;
+      height: 9px;
+      background: #e2e8f0;
+      border-radius: 4px;
+      overflow: hidden;
+      border: 1px solid #cbd5e1;
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.12s ease;
+    }
+
+    .hp-fill { background: linear-gradient(90deg, #ef4444, #16a34a); }
+    .atk-fill { background: linear-gradient(90deg, #f59e0b, #dc2626); }
+    .spd-fill { background: linear-gradient(90deg, #0284c7, #2563eb); }
+
+    .bar-value {
+      width: 58px;
+      text-align: right;
+      font-family: monospace;
+      font-weight: 900;
+      color: #0f172a;
+    }
+
+    .item-legend {
+      padding: 6px 10px;
+      background: #f8fafc;
+      border-top: 1px solid var(--panel-border);
+      font-size: 0.72rem;
+      color: #475569;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      justify-content: center;
+      font-weight: 700;
+    }
+
+    .legend-chip {
+      background: #ffffff;
+      padding: 1px 5px;
+      border-radius: 4px;
+      border: 1px solid #cbd5e1;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo-area">
+      <div class="logo-badge">f(x) ARENA</div>
+      <h1>함수들의 좌표평면 대난투</h1>
+    </div>
+
+    <div class="controls-bar">
+      <button id="btnStartPause" class="primary">
+        <span id="startIcon">▶</span> <span id="startText">배틀 시작</span>
+      </button>
+      <button id="btnReset" class="danger">↺ 초기화</button>
+      <button id="btnSpawnItem">★ 아이템 소환</button>
+
+      <span style="font-size:0.78rem; font-weight:700; color:#475569;">배속:</span>
+      <select id="speedSelect" class="speed-select">
+        <option value="1">1.0x</option>
+        <option value="1.5">1.5x</option>
+        <option value="2">2.0x</option>
+        <option value="3">3.0x</option>
+      </select>
+
+      <button id="btnSoundToggle" title="효과음">🔊</button>
+    </div>
+  </header>
+
+  <main class="battle-layout">
+    <!-- Left: Roster -->
+    <aside class="roster-panel">
+      <div class="panel-header">
+        <span>출전 함수 선택 (11종)</span>
+        <div style="display:flex; gap:3px;">
+          <button id="btnSelectAll" style="padding:2px 6px; font-size:0.7rem;">전체</button>
+          <button id="btnUnselectAll" style="padding:2px 6px; font-size:0.7rem;">해제</button>
+        </div>
+      </div>
+      <div class="roster-list" id="rosterListContainer"></div>
+    </aside>
+
+    <!-- Center: Compact Bright Math Grid Arena -->
+    <section class="canvas-container">
+      <div class="canvas-topbar">
+        <div>생존: <strong id="aliveCount">0</strong>/<strong id="totalCount">0</strong> | 필드 아이템: <strong id="fieldItemCount">0</strong>개 (자주 스폰)</div>
+        <div>좌표평면: <strong>1칸 = 40px (정밀 수학 격자)</strong></div>
+      </div>
+
+      <canvas id="battleCanvas"></canvas>
+
+      <div id="victoryBanner" class="canvas-overlay-banner">
+        <h2 id="winnerText">🏆 승리!</h2>
+        <p id="winnerDesc" style="margin-bottom:12px; font-weight:700; color:#334155;"></p>
+        <button id="btnBannerRestart" class="primary" style="margin: 0 auto;">다시 배틀하기</button>
+      </div>
+    </section>
+
+    <!-- Right: High-Contrast Dashboard -->
+    <aside class="dashboard-panel">
+      <div class="panel-header">
+        <span>📊 실시간 함수 대시보드</span>
+        <span style="font-size:0.72rem; color:#64748b;">HP:200 | 공속:1.5s | 공:10</span>
+      </div>
+
+      <div class="dashboard-list" id="dashboardListContainer"></div>
+
+      <div class="item-legend">
+        <div class="legend-chip"><span style="color:#16a34a;">+HP</span> 체력+50</div>
+        <div class="legend-chip"><span style="color:#dc2626;">+ATK</span> 공격력+5</div>
+        <div class="legend-chip"><span style="color:#0284c7;">+SPD</span> 딜레이-0.25s</div>
+        <div class="legend-chip"><span style="color:#7c3aed;">차수+1</span></div>
+        <div class="legend-chip"><span style="color:#ea580c;">계수×1.5</span></div>
+      </div>
+    </aside>
+  </main>
+
+  <script>
+    const BASE_HP = 200;
+    const BASE_ATK = 10;
+    const BASE_ATTACK_INTERVAL = 1.5;
+    const GRID_SIZE = 40; // 40px grid
+
+    const FUNCTION_ARCHETYPES = [
+      { id: 'linear', name: '일차함수', color: '#0284c7', coeff: 1, degree: 1, enabled: true, getFormula: (d, c) => (c===1&&d===1)?'y = x':(d===1?`y = ${c}x`:`y = ${c}x^${d}`), curveType: 'linear' },
+      { id: 'quadratic', name: '이차함수', color: '#ea580c', coeff: 1, degree: 2, enabled: true, getFormula: (d, c) => (c===1&&d===2)?'y = x²':`y = ${c!==1?c:''}x^${d}`, curveType: 'quadratic' },
+      { id: 'cubic', name: '삼차함수', color: '#7c3aed', coeff: 1, degree: 3, enabled: true, getFormula: (d, c) => (c===1&&d===3)?'y = x³':`y = ${c!==1?c:''}x^${d}`, curveType: 'cubic' },
+      { id: 'quartic', name: '사차함수', color: '#db2777', coeff: 1, degree: 4, enabled: true, getFormula: (d, c) => (c===1&&d===4)?'y = x⁴':`y = ${c!==1?c:''}x^${d}`, curveType: 'quartic' },
+      { id: 'exponential', name: '지수함수', color: '#d97706', coeff: 1, degree: 2, enabled: true, getFormula: (d, c) => (c===1&&d===2)?'y = 2ˣ':`y = ${c!==1?c+'·':''}${d}ˣ`, curveType: 'exponential' },
+      { id: 'logarithmic', name: '로그함수', color: '#059669', coeff: 1, degree: 2, enabled: true, getFormula: (d, c) => (c===1&&d===2)?'y = log₂ x':`y = ${c!==1?c:''}log_${d} x`, curveType: 'logarithmic' },
+      { id: 'sine', name: '사인함수', color: '#0891b2', coeff: 1, degree: 1, enabled: true, getFormula: (d, c) => (c===1&&d===1)?'y = sin x':`y = ${c!==1?c:''}sin(${d!==1?d:''}x)`, curveType: 'sine' },
+      { id: 'cosine', name: '코사인함수', color: '#2563eb', coeff: 1, degree: 1, enabled: true, getFormula: (d, c) => (c===1&&d===1)?'y = cos x':`y = ${c!==1?c:''}cos(${d!==1?d:''}x)`, curveType: 'cosine' },
+      { id: 'tangent', name: '탄젠트함수', color: '#dc2626', coeff: 1, degree: 1, enabled: true, getFormula: (d, c) => (c===1&&d===1)?'y = tan x':`y = ${c!==1?c:''}tan(${d!==1?d:''}x)`, curveType: 'tangent' },
+      { id: 'radical', name: '무리함수', color: '#65a30d', coeff: 1, degree: 2, enabled: true, getFormula: (d, c) => (c===1&&d===2)?'y = √x':`y = ${c!==1?c:''}ⁿ√x`, curveType: 'radical' },
+      { id: 'rational', name: '유리함수', color: '#b45309', coeff: 1, degree: 1, enabled: true, getFormula: (d, c) => (c===1&&d===1)?'y = 1/x':`y = ${c}/x^${d}`, curveType: 'rational' }
+    ];
+
+    const ITEM_TYPES = [
+      { id: 'hp', label: '+HP', text: 'HP +50', color: '#16a34a', bg: '#dcfce7', border: '#16a34a' },
+      { id: 'atk', label: '+ATK', text: '공격력 +5', color: '#dc2626', bg: '#fee2e2', border: '#dc2626' },
+      { id: 'spd', label: '+SPD', text: '공격딜레이 -0.25s', color: '#0284c7', bg: '#e0f2fe', border: '#0284c7' },
+      { id: 'deg_plus', label: '+차수', text: '차수 +1', color: '#7c3aed', bg: '#f3e8ff', border: '#7c3aed' },
+      { id: 'deg_minus', label: '-차수', text: '차수 -1', color: '#64748b', bg: '#f1f5f9', border: '#64748b' },
+      { id: 'coeff_mult', label: '×계수', text: '계수 ×1.5', color: '#db2777', bg: '#fce7f3', border: '#db2777' },
+      { id: 'coeff_div', label: '÷계수', text: '계수 ÷1.5', color: '#d97706', bg: '#fef3c7', border: '#d97706' }
+    ];
+
+    class SoundEngine {
+      constructor() { this.ctx = null; this.enabled = true; }
+      init() {
+        if (!this.ctx && (window.AudioContext || window.webkitAudioContext)) {
+          this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+      }
+      playSlash(f = 500) {
+        if (!this.enabled || !this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator(), g = this.ctx.createGain();
+          osc.type = 'sine'; osc.frequency.setValueAtTime(f, this.ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(f * 0.35, this.ctx.currentTime + 0.12);
+          g.gain.setValueAtTime(0.06, this.ctx.currentTime);
+          g.gain.linearRampToValueAtTime(0.001, this.ctx.currentTime + 0.12);
+          osc.connect(g); g.connect(this.ctx.destination);
+          osc.start(); osc.stop(this.ctx.currentTime + 0.12);
+        } catch(e) {}
+      }
+      playHit() {
+        if (!this.enabled || !this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator(), g = this.ctx.createGain();
+          osc.type = 'sawtooth'; osc.frequency.setValueAtTime(130, this.ctx.currentTime);
+          osc.frequency.linearRampToValueAtTime(40, this.ctx.currentTime + 0.08);
+          g.gain.setValueAtTime(0.08, this.ctx.currentTime);
+          g.gain.linearRampToValueAtTime(0.001, this.ctx.currentTime + 0.08);
+          osc.connect(g); g.connect(this.ctx.destination);
+          osc.start(); osc.stop(this.ctx.currentTime + 0.08);
+        } catch(e) {}
+      }
+      playItemPickup() {
+        if (!this.enabled || !this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator(), g = this.ctx.createGain();
+          osc.type = 'sine'; osc.frequency.setValueAtTime(520, this.ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(1040, this.ctx.currentTime + 0.12);
+          g.gain.setValueAtTime(0.08, this.ctx.currentTime);
+          g.gain.linearRampToValueAtTime(0.001, this.ctx.currentTime + 0.12);
+          osc.connect(g); g.connect(this.ctx.destination);
+          osc.start(); osc.stop(this.ctx.currentTime + 0.12);
+        } catch(e) {}
+      }
+    }
+    const sound = new SoundEngine();
+
+    /* Strictly Cartesian Graph Attack (Horizontal X, Vertical Upward Y) */
+    class CharacterGraphAttack {
+      constructor(opts) {
+        this.owner = opts.owner;
+        this.color = opts.color;
+        this.curveType = opts.curveType;
+        this.degree = opts.degree;
+        this.coeff = opts.coeff;
+        this.damage = opts.damage;
+        this.duration = 0.48;
+        this.age = 0;
+        this.alive = true;
+        this.hitEnemies = new Set();
+      }
+
+      update(dt, allCharacters, createFloatingText) {
+        this.age += dt;
+        if (this.age >= this.duration) {
+          this.alive = false;
+          return;
+        }
+
+        const progress = Math.min(1, this.age / 0.14);
+        const segments = this.generateGraphSegments(progress);
+
+        for (const char of allCharacters) {
+          if (char === this.owner || !char.alive || this.hitEnemies.has(char)) continue;
+          for (const seg of segments) {
+            for (const pt of seg) {
+              if (Math.hypot(pt.x - char.x, pt.y - char.y) < char.radius + 6) {
+                char.takeDamage(this.damage, this.owner, createFloatingText);
+                this.hitEnemies.add(char);
+                return;
+              }
+            }
+          }
+        }
+      }
+
+      evalMathFunction(X) {
+        const c = this.coeff, d = this.degree;
+        switch (this.curveType) {
+          case 'linear': return d === 1 ? c * X : c * Math.pow(X, d);
+          case 'quadratic': return c * Math.pow(X, 2);
+          case 'cubic': return c * 0.3 * Math.pow(X, 3);
+          case 'quartic': return c * 0.15 * Math.pow(X, 4);
+          case 'exponential': return c * (Math.pow(2, X) - 1);
+          case 'logarithmic': return X + 1 > 0.05 ? c * Math.log2(X + 1) : null;
+          case 'sine': return c * Math.sin(d * X);
+          case 'cosine': return c * Math.cos(d * X);
+          case 'tangent': {
+            if (Math.abs(Math.cos(d * X)) < 0.08) return null;
+            const val = c * Math.tan(d * X);
+            return Math.abs(val) > 7 ? null : val;
+          }
+          case 'radical': return X >= 0 ? c * Math.sqrt(X) : null;
+          case 'rational': {
+            if (Math.abs(X) < 0.2) return null;
+            const val = c / X;
+            return Math.abs(val) > 7 ? null : val;
+          }
+          default: return 0;
+        }
+      }
+
+      generateGraphSegments(progress) {
+        const segments = [];
+        let currentSeg = [];
+        const ox = this.owner.x, oy = this.owner.y;
+
+        let minX = -5, maxX = 5;
+        if (this.curveType === 'radical') { minX = 0; maxX = 5.5; }
+        else if (this.curveType === 'quadratic') { minX = -2.8; maxX = 2.8; }
+        else if (this.curveType === 'cubic') { minX = -2.6; maxX = 2.6; }
+        else if (this.curveType === 'quartic') { minX = -2.2; maxX = 2.2; }
+        else if (this.curveType === 'exponential') { minX = -4; maxX = 3.2; }
+        else if (this.curveType === 'logarithmic') { minX = -0.92; maxX = 5.5; }
+
+        const curMinX = minX * progress, curMaxX = maxX * progress;
+        const steps = 120, stepSize = (curMaxX - curMinX) / steps;
+
+        for (let i = 0; i <= steps; i++) {
+          const X = curMinX + i * stepSize;
+          const Y = this.evalMathFunction(X);
+          if (Y === null || isNaN(Y)) {
+            if (currentSeg.length > 0) { segments.push(currentSeg); currentSeg = []; }
+            continue;
+          }
+          currentSeg.push({ x: ox + X * GRID_SIZE, y: oy - Y * GRID_SIZE });
+        }
+        if (currentSeg.length > 0) segments.push(currentSeg);
+        return segments;
+      }
+
+      draw(ctx) {
+        const progress = Math.min(1, this.age / 0.14);
+        const segments = this.generateGraphSegments(progress);
+        if (segments.length === 0) return;
+
+        const ox = this.owner.x, oy = this.owner.y;
+        const alpha = Math.max(0, 1 - Math.pow(this.age / this.duration, 2));
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+
+        // Local Axes
+        ctx.strokeStyle = 'rgba(71, 85, 105, 0.4)';
+        ctx.lineWidth = 1.2;
+        ctx.setLineDash([3, 3]);
+        const span = 140 * progress;
+
+        ctx.beginPath();
+        ctx.moveTo(ox - span, oy); ctx.lineTo(ox + span, oy);
+        ctx.moveTo(ox, oy + span); ctx.lineTo(ox, oy - span);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Main Graph Stroke (Thick & Crisp)
+        ctx.strokeStyle = this.color;
+        ctx.lineWidth = 4;
+        ctx.shadowColor = this.color;
+        ctx.shadowBlur = 8;
+
+        segments.forEach(seg => {
+          if (seg.length < 2) return;
+          ctx.beginPath();
+          seg.forEach((pt, idx) => {
+            if (idx === 0) ctx.moveTo(pt.x, pt.y); else ctx.lineTo(pt.x, pt.y);
+          });
+          ctx.stroke();
+        });
+
+        // Origin Dot
+        ctx.beginPath();
+        ctx.arc(ox, oy, 4, 0, Math.PI * 2);
+        ctx.fillStyle = this.color;
+        ctx.fill();
+
+        // Formula Tag
+        const mainSeg = segments[segments.length - 1];
+        if (mainSeg && mainSeg.length > 4) {
+          const sample = mainSeg[Math.floor(mainSeg.length * 0.75)];
+          ctx.shadowBlur = 0;
+          ctx.font = 'bold 11px monospace';
+          ctx.fillStyle = '#0f172a';
+          ctx.fillText(` ${this.owner.getFormula()}`, sample.x + 5, sample.y - 6);
+        }
+
+        ctx.restore();
+      }
+    }
+
+    class Character {
+      constructor(archetype, x, y) {
+        this.id = archetype.id;
+        this.name = archetype.name;
+        this.color = archetype.color;
+        this.curveType = archetype.curveType;
+        this.maxHp = BASE_HP;
+        this.hp = BASE_HP;
+        this.attack = BASE_ATK;
+        this.attackInterval = BASE_ATTACK_INTERVAL;
+        this.cooldownTimer = Math.random() * this.attackInterval;
+        this.degree = archetype.degree;
+        this.coeff = archetype.coeff;
+        this.itemsEaten = 0;
+        this.alive = true;
+        this.x = x;
+        this.y = y;
+        this.radius = 24;
+        this.vx = (Math.random() - 0.5) * 80;
+        this.vy = (Math.random() - 0.5) * 80;
+        this.speed = 105;
+        this.target = null;
+        this.aiTimer = 0;
+        this.hitFlash = 0;
+      }
+
+      getFormula() {
+        const arch = FUNCTION_ARCHETYPES.find(a => a.id === this.id);
+        return arch ? arch.getFormula(this.degree, Number(this.coeff.toFixed(1))) : 'y=f(x)';
+      }
+
+      applyItem(item) {
+        this.itemsEaten++;
+        switch (item.type.id) {
+          case 'hp': this.maxHp += 30; this.hp = Math.min(this.maxHp, this.hp + 50); break;
+          case 'atk': this.attack += 5; break;
+          case 'spd': this.attackInterval = Math.max(0.2, Number((this.attackInterval - 0.25).toFixed(2))); break;
+          case 'deg_plus': this.degree = Math.min(10, this.degree + 1); this.attack += 3; break;
+          case 'deg_minus': this.degree = Math.max(1, this.degree - 1); this.attack = Math.max(5, this.attack - 2); break;
+          case 'coeff_mult': this.coeff = Math.min(10, Number((this.coeff * 1.5).toFixed(1))); this.attack = Math.round(this.attack * 1.25); break;
+          case 'coeff_div': this.coeff = Math.max(0.5, Number((this.coeff / 1.5).toFixed(1))); this.attack = Math.max(5, Math.round(this.attack * 0.85)); break;
+        }
+      }
+
+      update(dt, w, h, allChars, items, attacks, createFloatingText) {
+        if (!this.alive) return;
+        if (this.hitFlash > 0) this.hitFlash -= dt * 5;
+        this.cooldownTimer -= dt;
+
+        this.aiTimer -= dt;
+        if (this.aiTimer <= 0) {
+          this.aiTimer = 0.3 + Math.random() * 0.2;
+          this.decideAI(allChars, items);
+        }
+
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+
+        const m = this.radius + 12;
+        if (this.x < m) { this.x = m; this.vx = Math.abs(this.vx); }
+        if (this.x > w - m) { this.x = w - m; this.vx = -Math.abs(this.vx); }
+        if (this.y < m) { this.y = m; this.vy = Math.abs(this.vy); }
+        if (this.y > h - m) { this.y = h - m; this.vy = -Math.abs(this.vy); }
+
+        if (this.cooldownTimer <= 0 && this.target && this.target.alive) {
+          sound.playSlash(320 + (this.degree * 40));
+          attacks.push(new CharacterGraphAttack({
+            owner: this, color: this.color, curveType: this.curveType,
+            degree: this.degree, coeff: this.coeff, damage: this.attack
+          }));
+          this.cooldownTimer = this.attackInterval;
+        }
+
+        for (let i = items.length - 1; i >= 0; i--) {
+          const it = items[i];
+          if (Math.hypot(this.x - it.x, this.y - it.y) < this.radius + it.radius) {
+            this.applyItem(it);
+            sound.playItemPickup();
+            createFloatingText(it.type.text, this.x, this.y - 25, it.type.color);
+            items.splice(i, 1);
+          }
+        }
+      }
+
+      decideAI(allChars, items) {
+        let nearestEnemy = null, minEnemyDist = Infinity;
+        for (const o of allChars) {
+          if (o === this || !o.alive) continue;
+          const d = Math.hypot(o.x - this.x, o.y - this.y);
+          if (d < minEnemyDist) { minEnemyDist = d; nearestEnemy = o; }
+        }
+        this.target = nearestEnemy;
+
+        let nearestItem = null, minItemDist = 320;
+        for (const it of items) {
+          const d = Math.hypot(it.x - this.x, it.y - this.y);
+          if (d < minItemDist) { minItemDist = d; nearestItem = it; }
+        }
+
+        let targetDx = 0, targetDy = 0;
+        if (nearestItem) {
+          targetDx = nearestItem.x - this.x;
+          targetDy = nearestItem.y - this.y;
+        } else if (nearestEnemy) {
+          let ox = 0, oy = 0;
+          if (this.curveType === 'quadratic' || this.curveType === 'quartic') oy = 75;
+          else if (this.curveType === 'radical' || this.curveType === 'exponential') { ox = -65; oy = 55; }
+          else if (this.curveType === 'linear') { ox = -50; oy = 50; }
+
+          targetDx = (nearestEnemy.x + ox) - this.x;
+          targetDy = (nearestEnemy.y + oy) - this.y;
+        } else {
+          targetDx = (Math.random() - 0.5) * 200;
+          targetDy = (Math.random() - 0.5) * 200;
+        }
+
+        const len = Math.hypot(targetDx, targetDy) || 1;
+        this.vx = (targetDx / len) * this.speed;
+        this.vy = (targetDy / len) * this.speed;
+      }
+
+      takeDamage(damage, attacker, createFloatingText) {
+        if (!this.alive) return;
+        this.hp -= damage;
+        this.hitFlash = 1;
+        sound.playHit();
+        createFloatingText(`-${damage}`, this.x, this.y - 20, '#dc2626');
+        if (this.hp <= 0) {
+          this.hp = 0; this.alive = false;
+          createFloatingText(`☠ 탈락`, this.x, this.y - 30, '#64748b');
+        }
+      }
+
+      draw(ctx) {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        if (!this.alive) ctx.globalAlpha = 0.28;
+
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = this.hitFlash > 0.1 ? '#fecaca' : '#ffffff';
+        ctx.fill();
+
+        ctx.lineWidth = 3.5;
+        ctx.strokeStyle = this.hitFlash > 0.1 ? '#dc2626' : this.color;
+        ctx.shadowColor = 'rgba(0,0,0,0.15)';
+        ctx.shadowBlur = 6;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        // Inner Graph
+        this.drawInnerGraph(ctx);
+
+        ctx.fillStyle = '#0f172a';
+        ctx.font = 'bold 9.5px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(this.name, 0, 14);
+
+        if (this.alive) {
+          const w = 38, h = 5, r = Math.max(0, this.hp / this.maxHp);
+          ctx.fillStyle = '#e2e8f0';
+          ctx.fillRect(-w/2, -this.radius - 10, w, h);
+          ctx.fillStyle = r > 0.5 ? '#16a34a' : (r > 0.25 ? '#ca8a04' : '#dc2626');
+          ctx.fillRect(-w/2, -this.radius - 10, w * r, h);
+          ctx.strokeStyle = '#94a3b8';
+          ctx.lineWidth = 0.8;
+          ctx.strokeRect(-w/2, -this.radius - 10, w, h);
+        }
+        ctx.restore();
+      }
+
+      drawInnerGraph(ctx) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius - 3, 0, Math.PI * 2);
+        ctx.clip();
+
+        ctx.strokeStyle = '#cbd5e1';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(-this.radius, -1); ctx.lineTo(this.radius, -1);
+        ctx.moveTo(0, -this.radius); ctx.lineTo(0, this.radius);
+        ctx.stroke();
+
+        ctx.strokeStyle = this.color;
+        ctx.lineWidth = 2;
+        const r = 15, step = 1.2;
+
+        if (this.curveType === 'rational') {
+          ctx.beginPath();
+          for (let px = -r; px <= -2.5; px += step) {
+            let py = -(1 / (px / 6)) * 4 - 1;
+            if (px === -r) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+          }
+          ctx.stroke();
+          ctx.beginPath();
+          for (let px = 2.5; px <= r; px += step) {
+            let py = -(1 / (px / 6)) * 4 - 1;
+            if (px === 2.5) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+          }
+          ctx.stroke();
+        } else if (this.curveType === 'radical') {
+          ctx.beginPath();
+          for (let px = 0; px <= r; px += step) {
+            let py = -Math.sqrt(px / 7) * 10 - 1;
+            if (px === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+          }
+          ctx.stroke();
+        } else {
+          ctx.beginPath();
+          let started = false;
+          for (let px = -r; px <= r; px += step) {
+            let u = px / 7, Y = 0;
+            switch(this.curveType) {
+              case 'linear': Y = u; break;
+              case 'quadratic': Y = Math.pow(u, 2) * 0.55; break;
+              case 'cubic': Y = Math.pow(u, 3) * 0.28; break;
+              case 'quartic': Y = Math.pow(u, 4) * 0.22; break;
+              case 'exponential': Y = (Math.pow(2, u) - 1) * 0.75; break;
+              case 'logarithmic': if (u + 1.2 > 0.05) Y = Math.log2(u + 1.2) * 0.85; else continue; break;
+              case 'sine': Y = Math.sin(u * 1.6); break;
+              case 'cosine': Y = Math.cos(u * 1.6); break;
+              case 'tangent': Y = Math.tan(u * 1.1) * 0.7; break;
+            }
+            let py = -Y * 7 - 1;
+            if (!started) { ctx.moveTo(px, py); started = true; } else ctx.lineTo(px, py);
+          }
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+    }
+
+    class ArenaItem {
+      constructor(x, y) {
+        this.x = x; this.y = y; this.radius = 14;
+        this.type = ITEM_TYPES[Math.floor(Math.random() * ITEM_TYPES.length)];
+        this.pulse = 0;
+      }
+      update(dt) { this.pulse += dt * 4; }
+      draw(ctx) {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        const r = this.radius + Math.sin(this.pulse) * 1.5;
+        ctx.beginPath();
+        ctx.arc(0, 0, r, 0, Math.PI * 2);
+        ctx.fillStyle = this.type.bg;
+        ctx.strokeStyle = this.type.border;
+        ctx.lineWidth = 2.2;
+        ctx.shadowColor = 'rgba(0,0,0,0.1)';
+        ctx.shadowBlur = 4;
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = this.type.color;
+        ctx.font = 'bold 10px monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(this.type.label, 0, 0);
+        ctx.restore();
+      }
+    }
+
+    class FloatingText {
+      constructor(text, x, y, color) {
+        this.text = text; this.x = x; this.y = y; this.color = color;
+        this.opacity = 1; this.vy = -30;
+      }
+      update(dt) { this.y += this.vy * dt; this.opacity -= dt * 1.3; }
+      draw(ctx) {
+        if (this.opacity <= 0) return;
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, this.opacity);
+        ctx.fillStyle = this.color;
+        ctx.font = 'bold 12px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(this.text, this.x, this.y);
+        ctx.restore();
+      }
+    }
+
+    class FunctionBattleGame {
+      constructor() {
+        this.canvas = document.getElementById('battleCanvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.characters = [];
+        this.activeAttacks = [];
+        this.items = [];
+        this.floatingTexts = [];
+        this.isRunning = false;
+        this.gameSpeed = 1;
+        this.battleSeconds = 0;
+
+        // Frequent Item Spawns (자주 나옴)
+        this.itemSpawnTimer = 2.5;
+        this.maxFieldItems = 7;
+        this.lastTime = 0;
+
+        this.btnStartPause = document.getElementById('btnStartPause');
+        this.startIcon = document.getElementById('startIcon');
+        this.startText = document.getElementById('startText');
+        this.btnReset = document.getElementById('btnReset');
+        this.btnSpawnItem = document.getElementById('btnSpawnItem');
+        this.speedSelect = document.getElementById('speedSelect');
+        this.btnSoundToggle = document.getElementById('btnSoundToggle');
+
+        this.rosterContainer = document.getElementById('rosterListContainer');
+        this.dashboardContainer = document.getElementById('dashboardListContainer');
+        this.aliveCountEl = document.getElementById('aliveCount');
+        this.totalCountEl = document.getElementById('totalCount');
+        this.fieldItemCountEl = document.getElementById('fieldItemCount');
+        this.victoryBanner = document.getElementById('victoryBanner');
+        this.winnerText = document.getElementById('winnerText');
+        this.winnerDesc = document.getElementById('winnerDesc');
+        this.btnBannerRestart = document.getElementById('btnBannerRestart');
+
+        this.init();
+      }
+
+      init() {
+        this.resizeCanvas();
+        window.addEventListener('resize', () => this.resizeCanvas());
+        this.renderRosterUI();
+        this.resetGame();
+        this.setupEvents();
+        requestAnimationFrame((ts) => this.loop(ts));
+      }
+
+      resizeCanvas() {
+        const rect = this.canvas.parentElement.getBoundingClientRect();
+        this.canvas.width = rect.width;
+        this.canvas.height = rect.height - 35;
+      }
+
+      renderRosterUI() {
+        this.rosterContainer.innerHTML = '';
+        FUNCTION_ARCHETYPES.forEach(arch => {
+          const card = document.createElement('div');
+          card.className = 'roster-card';
+          card.innerHTML = `
+            <div class="roster-info">
+              <div class="fn-dot" style="background:${arch.color};"></div>
+              <div>
+                <div class="fn-name" style="color:${arch.color};">${arch.name}</div>
+                <div class="fn-formula-sub">${arch.getFormula(arch.degree, arch.coeff)}</div>
+              </div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="toggle_${arch.id}" ${arch.enabled ? 'checked' : ''}>
+              <span class="slider"></span>
+            </label>
+          `;
+          card.querySelector('input').addEventListener('change', (e) => {
+            arch.enabled = e.target.checked;
+            this.resetGame();
+          });
+          this.rosterContainer.appendChild(card);
+        });
+      }
+
+      resetGame() {
+        this.isRunning = false;
+        this.updateStartButtonUI(false);
+        this.victoryBanner.style.display = 'none';
+        this.battleSeconds = 0;
+        this.itemSpawnTimer = 2.0;
+
+        this.activeAttacks = [];
+        this.items = [];
+        this.floatingTexts = [];
+        this.characters = [];
+
+        const enabled = FUNCTION_ARCHETYPES.filter(a => a.enabled);
+        const count = enabled.length;
+        const cx = this.canvas.width / 2;
+        const cy = this.canvas.height / 2;
+        // Compact battle formation
+        const radius = Math.min(cx, cy) * 0.62;
+
+        enabled.forEach((arch, i) => {
+          const angle = (i / count) * Math.PI * 2 - Math.PI / 2;
+          this.characters.push(new Character(arch, cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius));
+        });
+
+        // 3 initial items
+        for (let i = 0; i < 3; i++) this.spawnRandomItem();
+
+        this.renderDashboardUI();
+        this.updateStatusCounts();
+      }
+
+      spawnRandomItem() {
+        if (this.items.length >= this.maxFieldItems) return;
+        const m = 45;
+        this.items.push(new ArenaItem(m + Math.random() * (this.canvas.width - m * 2), m + Math.random() * (this.canvas.height - m * 2)));
+      }
+
+      setupEvents() {
+        this.btnStartPause.addEventListener('click', () => { sound.init(); this.toggleStartPause(); });
+        this.btnReset.addEventListener('click', () => this.resetGame());
+        this.btnSpawnItem.addEventListener('click', () => { this.spawnRandomItem(); this.updateStatusCounts(); });
+        this.speedSelect.addEventListener('change', (e) => this.gameSpeed = parseFloat(e.target.value));
+        this.btnSoundToggle.addEventListener('click', () => {
+          sound.enabled = !sound.enabled;
+          this.btnSoundToggle.textContent = sound.enabled ? '🔊' : '🔇';
+        });
+        document.getElementById('btnSelectAll').addEventListener('click', () => {
+          FUNCTION_ARCHETYPES.forEach(a => { a.enabled = true; const el = document.getElementById(`toggle_${a.id}`); if (el) el.checked = true; });
+          this.resetGame();
+        });
+        document.getElementById('btnUnselectAll').addEventListener('click', () => {
+          FUNCTION_ARCHETYPES.forEach(a => { a.enabled = false; const el = document.getElementById(`toggle_${a.id}`); if (el) el.checked = false; });
+          this.resetGame();
+        });
+        this.btnBannerRestart.addEventListener('click', () => { this.resetGame(); this.toggleStartPause(); });
+      }
+
+      toggleStartPause() {
+        if (this.characters.length === 0) { alert('함수를 1개 이상 켜주세요!'); return; }
+        this.isRunning = !this.isRunning;
+        this.updateStartButtonUI(this.isRunning);
+      }
+
+      updateStartButtonUI(running) {
+        if (running) {
+          this.startIcon.textContent = '⏸'; this.startText.textContent = '일시 정지';
+          this.btnStartPause.style.background = '#d97706';
+        } else {
+          this.startIcon.textContent = '▶'; this.startText.textContent = '배틀 시작';
+          this.btnStartPause.style.background = '';
+        }
+      }
+
+      createFloatingText(t, x, y, c) { this.floatingTexts.push(new FloatingText(t, x, y, c)); }
+      updateStatusCounts() {
+        this.aliveCountEl.textContent = this.characters.filter(c => c.alive).length;
+        this.totalCountEl.textContent = this.characters.length;
+        this.fieldItemCountEl.textContent = this.items.length;
+      }
+
+      renderDashboardUI() {
+        this.dashboardContainer.innerHTML = '';
+        this.characters.forEach(char => {
+          const card = document.createElement('div');
+          card.id = `stat_card_${char.id}`;
+          card.className = `stat-card ${char.alive ? '' : 'eliminated'}`;
+          card.style.borderLeftColor = char.color;
+          card.innerHTML = `
+            <div class="stat-card-header">
+              <div style="display:flex; align-items:center; gap:6px;">
+                <span class="stat-fn-badge" style="background:${char.color}15; color:${char.color}; border:1px solid ${char.color}40;">${char.name}</span>
+                <span class="stat-formula" id="formula_${char.id}">${char.getFormula()}</span>
+              </div>
+              <div class="item-counter-badge">🍎 <span id="item_count_${char.id}">${char.itemsEaten}</span></div>
+            </div>
+            <div class="bar-group">
+              <div class="bar-row">
+                <span class="bar-label">HP</span>
+                <div class="bar-track"><div class="bar-fill hp-fill" id="hp_bar_${char.id}" style="width:${(char.hp/char.maxHp)*100}%"></div></div>
+                <span class="bar-value" id="hp_val_${char.id}">${Math.round(char.hp)}/${char.maxHp}</span>
+              </div>
+              <div class="bar-row">
+                <span class="bar-label">공격</span>
+                <div class="bar-track"><div class="bar-fill atk-fill" id="atk_bar_${char.id}" style="width:${Math.min(100,(char.attack/50)*100)}%"></div></div>
+                <span class="bar-value" id="atk_val_${char.id}">${char.attack}</span>
+              </div>
+              <div class="bar-row">
+                <span class="bar-label">공속</span>
+                <div class="bar-track"><div class="bar-fill spd-fill" id="spd_bar_${char.id}" style="width:${Math.min(100, Math.max(15, ((1.6 - char.attackInterval) / 1.4) * 100))}%"></div></div>
+                <span class="bar-value" id="spd_val_${char.id}">${char.attackInterval.toFixed(2)}s</span>
+              </div>
+            </div>
+          `;
+          this.dashboardContainer.appendChild(card);
+        });
+      }
+
+      updateDashboardLiveStats() {
+        this.characters.forEach(char => {
+          const card = document.getElementById(`stat_card_${char.id}`);
+          if (!card) return;
+          if (!char.alive && !card.classList.contains('eliminated')) card.classList.add('eliminated');
+          else if (char.alive && card.classList.contains('eliminated')) card.classList.remove('eliminated');
+
+          const fEl = document.getElementById(`formula_${char.id}`); if (fEl) fEl.textContent = char.getFormula();
+          const itEl = document.getElementById(`item_count_${char.id}`); if (itEl) itEl.textContent = char.itemsEaten;
+          const hb = document.getElementById(`hp_bar_${char.id}`), hv = document.getElementById(`hp_val_${char.id}`);
+          if (hb) hb.style.width = `${Math.max(0, (char.hp/char.maxHp)*100)}%`;
+          if (hv) hv.textContent = `${Math.round(char.hp)}/${char.maxHp}`;
+          const ab = document.getElementById(`atk_bar_${char.id}`), av = document.getElementById(`atk_val_${char.id}`);
+          if (ab) ab.style.width = `${Math.min(100,(char.attack/50)*100)}%`;
+          if (av) av.textContent = char.attack;
+          const sb = document.getElementById(`spd_bar_${char.id}`), sv = document.getElementById(`spd_val_${char.id}`);
+          if (sb) sb.style.width = `${Math.min(100, Math.max(15, ((1.6 - char.attackInterval) / 1.4) * 100))}%`;
+          if (sv) sv.textContent = `${char.attackInterval.toFixed(2)}s`;
+        });
+      }
+
+      checkBattleOver() {
+        const alive = this.characters.filter(c => c.alive);
+        if (this.characters.length > 1 && alive.length <= 1) {
+          this.isRunning = false;
+          this.updateStartButtonUI(false);
+          if (alive.length === 1) {
+            const w = alive[0];
+            this.winnerText.textContent = `🏆 ${w.name} 최후의 승리!`;
+            this.winnerText.style.color = w.color;
+            this.winnerDesc.textContent = `최종식: ${w.getFormula()} | 공:${w.attack} | 공속:${w.attackInterval.toFixed(2)}s | 아이템:${w.itemsEaten}개`;
+          } else {
+            this.winnerText.textContent = '⚔ 무승부';
+            this.winnerDesc.textContent = '모든 함수가 전멸했습니다!';
+          }
+          this.victoryBanner.style.display = 'block';
+        }
+      }
+
+      /* Bright Clean Coordinate Math Paper (White Grid) */
+      drawCoordinatePlane(w, h) {
+        const ctx = this.ctx;
+        const cx = w / 2, cy = h / 2;
+        const gs = GRID_SIZE;
+
+        ctx.save();
+        // Background
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, w, h);
+
+        // Grid Lines (Subtle light blue-gray)
+        ctx.strokeStyle = '#e2e8f0';
+        ctx.lineWidth = 1;
+
+        for (let x = cx % gs; x < w; x += gs) {
+          ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+        }
+        for (let y = cy % gs; y < h; y += gs) {
+          ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+        }
+
+        // Main Axes X, Y (Dark Navy Blue)
+        ctx.strokeStyle = '#334155';
+        ctx.lineWidth = 2;
+
+        // X Axis
+        ctx.beginPath(); ctx.moveTo(10, cy); ctx.lineTo(w - 10, cy); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(w - 10, cy); ctx.lineTo(w - 18, cy - 4); ctx.lineTo(w - 18, cy + 4); ctx.fillStyle = '#334155'; ctx.fill();
+
+        // Y Axis
+        ctx.beginPath(); ctx.moveTo(cx, h - 10); ctx.lineTo(cx, 10); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(cx, 10); ctx.lineTo(cx - 4, 18); ctx.lineTo(cx + 4, 18); ctx.fillStyle = '#334155'; ctx.fill();
+
+        // Numbers & Origin
+        ctx.font = '10px monospace';
+        ctx.fillStyle = '#64748b';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+
+        let uX = 1;
+        for (let x = cx + gs; x < w - 24; x += gs) {
+          ctx.beginPath(); ctx.moveTo(x, cy - 2); ctx.lineTo(x, cy + 2); ctx.stroke();
+          ctx.fillText(`+${uX * 2}`, x, cy + 4); uX++;
+        }
+        uX = 1;
+        for (let x = cx - gs; x > 24; x -= gs) {
+          ctx.beginPath(); ctx.moveTo(x, cy - 2); ctx.lineTo(x, cy + 2); ctx.stroke();
+          ctx.fillText(`-${uX * 2}`, x, cy + 4); uX++;
+        }
+
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        let uY = 1;
+        for (let y = cy - gs; y > 24; y -= gs) {
+          ctx.beginPath(); ctx.moveTo(cx - 2, y); ctx.lineTo(cx + 2, y); ctx.stroke();
+          ctx.fillText(`+${uY * 2}`, cx - 4, y); uY++;
+        }
+        uY = 1;
+        for (let y = cy + gs; y < h - 24; y += gs) {
+          ctx.beginPath(); ctx.moveTo(cx - 2, y); ctx.lineTo(cx + 2, y); ctx.stroke();
+          ctx.fillText(`-${uY * 2}`, cx - 4, y); uY++;
+        }
+
+        ctx.fillText('O', cx - 6, cy + 10);
+        ctx.fillText('x', w - 6, cy - 8);
+        ctx.fillText('y', cx + 10, 14);
+
+        // Boundary
+        ctx.strokeStyle = '#94a3b8';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(6, 6, w - 12, h - 12);
+        ctx.restore();
+      }
+
+      loop(timestamp) {
+        if (!this.lastTime) this.lastTime = timestamp;
+        let dt = (timestamp - this.lastTime) / 1000;
+        this.lastTime = timestamp;
+        if (dt > 0.1) dt = 0.1;
+        const scaledDt = dt * this.gameSpeed;
+
+        if (this.isRunning) {
+          this.battleSeconds += scaledDt;
+
+          // Frequent Item Spawn (아이템이 3~5초마다 자주 생성)
+          this.itemSpawnTimer -= scaledDt;
+          if (this.itemSpawnTimer <= 0) {
+            this.itemSpawnTimer = 3.2 + Math.random() * 2.0;
+            if (this.items.length < this.maxFieldItems) this.spawnRandomItem();
+          }
+
+          this.characters.forEach(c => c.update(
+            scaledDt, this.canvas.width, this.canvas.height,
+            this.characters, this.items, this.activeAttacks,
+            (t, x, y, col) => this.createFloatingText(t, x, y, col)
+          ));
+
+          for (let i = this.activeAttacks.length - 1; i >= 0; i--) {
+            const atk = this.activeAttacks[i];
+            atk.update(scaledDt, this.characters, (t, x, y, col) => this.createFloatingText(t, x, y, col));
+            if (!atk.alive) this.activeAttacks.splice(i, 1);
+          }
+
+          this.items.forEach(it => it.update(scaledDt));
+          this.checkBattleOver();
+          this.updateStatusCounts();
+          this.updateDashboardLiveStats();
+        }
+
+        for (let i = this.floatingTexts.length - 1; i >= 0; i--) {
+          const ft = this.floatingTexts[i];
+          ft.update(dt * this.gameSpeed);
+          if (ft.opacity <= 0) this.floatingTexts.splice(i, 1);
+        }
+
+        const w = this.canvas.width, h = this.canvas.height;
+        this.ctx.clearRect(0, 0, w, h);
+
+        this.drawCoordinatePlane(w, h);
+        this.items.forEach(it => it.draw(this.ctx));
+        this.activeAttacks.forEach(atk => atk.draw(this.ctx));
+        this.characters.forEach(c => c.draw(this.ctx));
+        this.floatingTexts.forEach(ft => ft.draw(this.ctx));
+
+        requestAnimationFrame((ts) => this.loop(ts));
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => { window.game = new FunctionBattleGame(); });
+  </script>
+</body>
+</html>
